@@ -1,109 +1,100 @@
 #include <iostream>
+#include <vector>
 #include <opencv2\opencv.hpp>
 
 using namespace std;
 using namespace cv;
 
 cv::Vec3i getTargetColor(cv::Mat bg){
-	cv::Mat_<cv::Vec3b>::const_iterator it = bg.begin<cv::Vec3b>();
-	cv::Mat_<cv::Vec3b>::const_iterator itend = bg.end<cv::Vec3b>();
-	Vec3i sum = Vec3i(0,0,0);
+    cv::Mat_<cv::Vec3b>::const_iterator it = bg.begin<cv::Vec3b>();
+    cv::Mat_<cv::Vec3b>::const_iterator itend = bg.end<cv::Vec3b>();
+    Vec3i sum = Vec3i(0,0,0);
 
-	for(;it!=itend;it++){
-	   sum += *it;
-	}
+    for(;it!=itend;it++){
+        sum += *it;
+    }
 
-	return sum/(bg.rows*bg.cols);
+    return sum/(bg.rows*bg.cols);
 }
 
 
 int main(){
+    //显示源图像
+    cv::Mat img = cv::imread("D:9.tif",1);
+    namedWindow("Resoure",0);
+    imshow("Resoure",img);
+    //cv::Mat result(cv::Size(image.rows,image.colsR),CV_8UC3,Scalar(0,0,0));
 
-/*	namedWindow("BG",0);
-	namedWindow("Image",0);
-	namedWindow("Fore",0);
-	namedWindow("Opened",0);
 
-	cv::Mat background = cv::imread("D:BG.tif",-1);
-	imshow("BG",background);
+    //计算伪二值图像
+    Mat image = img.clone();
+    cv::Mat_<cv::Vec3b>::iterator it = image.begin<cv::Vec3b>();
+    cv::Mat_<cv::Vec3b>::iterator itend = image.end<cv::Vec3b>();
+    for(;it!= itend;it++){
+        if((abs((*it)(0)-140)<60) && (abs((*it)(1)-63)<35) && (abs((*it)(2)-44))<35)
+            *it = Vec3b(0,0,0);
+        else
+            *it = Vec3b(255,255,255);
+    }
 
-	cv::Mat image = cv::imread("D:F2.tif",-1);
-	imshow("Image",image);
+    //显示二值图像
+    cv::Mat binary;
+    cvtColor(image,image,CV_BGR2GRAY);
+    threshold(image,binary,1,255,CV_THRESH_BINARY);
+    namedWindow("Binary",0);
+    imshow("Binary",binary);
+    //imwrite("D:bian.tif",binary);
 
-	cv::Mat foreground = image - background;
-	cv::imshow("Fore1",foreground);
-	imwrite("D:fore.tif",foreground);
+    //开运算
+    cv::Mat opened,element3(3,3,CV_8U,cv::Scalar(1));
+    cv::morphologyEx(binary,opened,cv::MORPH_OPEN,element3);
+    namedWindow("Opened",0);
+    imshow("Opened",opened);
 
-	cv::cvtColor(foreground,foreground,CV_BGR2GRAY);
-	imshow("Gray",foreground);
-	
-	cv::Mat opened,element3(3,3,CV_8U,cv::Scalar(1));
-	threshold(foreground,foreground,2,255,CV_THRESH_BINARY);
-	cv::morphologyEx(foreground,opened,cv::MORPH_OPEN,element3);
-	imshow("Fore",foreground);
-	imshow("Opened",opened);*/
+    //计算所有轮廓
+    std::vector<std::vector<cv::Point>>contours;
+    cv::findContours(opened,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE);
+    cout<<"the numbers of contours:"<< contours.size()<<endl;
 
-	//cv::Mat background = cv::imread("D:BG.tif",-1);
-	//auto c = getTargetColor(background);//151 63 44
+    //画出所有轮廓并显示
+    cv::Mat curves(image.size(),CV_8U,cv::Scalar(255));
+    cv::drawContours(curves,contours,-1,cv::Scalar(0),2);
+    namedWindow("Contours",0);
+    imshow("Contours",curves);
 
-	cv::Mat img = cv::imread("D://1//1.tif",-1);
-	namedWindow("Resoure",0);
-	imshow("Resoure",img);
-	//cv::Mat result(cv::Size(image.rows,image.cols),CV_8UC3,Scalar(0,0,0));
-	Mat image = img.clone();
-	cv::Mat_<cv::Vec3b>::iterator it = image.begin<cv::Vec3b>();
-	cv::Mat_<cv::Vec3b>::iterator itend = image.end<cv::Vec3b>();
+    //计算包含中心点的轮廓
+    std::vector<std::vector<cv::Point>>::iterator itc = contours.begin();
+    std::vector<cv::Point> temp;
+    while( itc!=contours.end()){
+        if(cv::pointPolygonTest(*itc,cv::Point2f(image.cols/2,image.rows/2),false)>0){
+            temp = *itc;
+            contours.clear();
+            contours.push_back(temp);
+            break;
+        }else
+            itc++;
 
-	for(;it!= itend;it++){
-		if((abs((*it)(0)-140)<60) && (abs((*it)(1)-63)<35) && (abs((*it)(2)-44))<35)
-			*it = Vec3b(0,0,0);
-		else
-			*it = Vec3b(255,255,255);
-	}
-	cv::Mat binary;
-	cvtColor(image,image,CV_BGR2GRAY);
-	threshold(image,binary,1,255,CV_THRESH_BINARY);
-	namedWindow("Binary",0);
-	imshow("Binary",binary);
-	//imwrite("D:bian.tif",binary);
+    }
 
-	cv::Mat opened,element3(3,3,CV_8U,cv::Scalar(1));
-	cv::morphologyEx(binary,opened,cv::MORPH_OPEN,element3);
-	namedWindow("Opened",0);
-	imshow("Opened",opened);
+    //画出包含中心点的轮廓
+    cv::Mat Maxcurves(image.size(),CV_8U,cv::Scalar(255));
+    cv::drawContours(Maxcurves,contours,-1,cv::Scalar(0),2);
+    namedWindow("MaxContour",0);
+    imshow("MaxContour",Maxcurves);
 
-	std::vector<std::vector<cv::Point>>contours;
-	cv::findContours(opened,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE);
-	cout<<contours.size()<<endl;
-
-	cv::Mat curves(image.size(),CV_8U,cv::Scalar(255));
-	cv::drawContours(curves,contours,-1,cv::Scalar(0),2);
-	namedWindow("Contours",0);
-	imshow("Contours",curves);
-	
-	std::vector<std::vector<cv::Point>>::iterator itc = contours.begin();
-	int maxSize = 0;
-	while( itc!=contours.end()){
-		if((*itc).size()<maxSize)
-			itc = contours.erase(itc);
-		else{
-			maxSize = (*itc).size();
-			itc++;}
-	}
-	cv::Mat curves1(image.size(),CV_8U,cv::Scalar(255));
-	cv::drawContours(curves1,contours,-1,cv::Scalar(0),2);
-	imshow("Contours",curves1);
-
-	/*int cmin = 140;
-	std::vector<std::vector<cv::Point>>::iterator itc = contours.begin();
-	while(itc!= contours.end()){
-		if(itc->size()<cmin)
-			itc = contours.erase(itc);
-		else
-			++itc;
-	}
-	namedWindow("Contours",0);
-	imshow("Contours",curves);*/
-	waitKey();
-	return 0;
+    waitKey();
+    return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
