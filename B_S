@@ -1,0 +1,51 @@
+//图片的blue分量减去Saturate分量,并显示。
+#include <iostream>
+#include <opencv.hpp>
+
+using namespace std;
+using namespace cv;
+
+int main(){
+    //建立显示窗口
+    cv::namedWindow("DEMO",0);
+    cv::namedWindow("B",0);
+    cv::namedWindow("S",0);
+    cv::namedWindow("B_S",0);
+    cv::namedWindow("B_S_Binary",0);
+
+    //读取并显示源图像
+    cv::Mat image = cv::imread("D:9.tif");
+    cv::imshow("DEMO",image);
+    std::cout << image.at<cv::Vec3b>(0) <<std::endl;
+
+    //分离B分量并显示
+    std::vector<cv::Mat> mv;
+    cv::split(image,mv);
+    cv::imshow("B",mv[0]);
+    std::cout << (int)mv[0].at<uchar>(0)<<std::endl;
+
+    //RGB转换成HLS图像
+    cv::Mat hslImg;
+    cv::cvtColor(image,hslImg,CV_BGR2HLS);
+    std::cout << hslImg.at<cv::Vec3b>(0) <<std::endl;
+
+    //分离S变量并显示
+    std::vector<cv::Mat> hslv;
+    cv::split(hslImg,hslv);
+    cv::imshow("S",hslv[2]);
+    std::cout <<(int)hslv[2].at<uchar>(0)<<std::endl;
+
+    //B-S分量并显示
+    cv::Mat B_S = mv[0] - hslv[2];
+    cv::imshow("B_S",B_S);
+
+    //二值话B-S分量并显示
+    cv::Mat B_S_Binary;
+    cv::threshold(B_S,B_S_Binary,55,255,CV_THRESH_BINARY);
+    cv::imshow("B_S_Binary",B_S_Binary);
+    cv::imwrite("D:jjj.jpg",B_S_Binary);
+
+    cv::waitKey();
+    return 0;
+}
+
